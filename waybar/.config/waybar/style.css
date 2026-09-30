@@ -1,0 +1,98 @@
+@import "/usr/lib/hyprwhspr/config/waybar/hyprwhspr-style.css";
+/* waybar Nord theme — frosted glass, floating pill (niri 26.04 blur) */
+
+* {
+  border: none;
+  border-radius: 0;
+  font-family: "MesloLGM Nerd Font";
+  font-size: 12px;
+  min-height: 0;
+}
+
+window#waybar {
+  background-color: rgba(46, 52, 64, 0.66); /* nord0, translucent glass */
+  color: #ECEFF4;
+  border: 1px solid rgba(236, 239, 244, 0.1); /* glass edge */
+  border-radius: 12px;
+}
+
+#workspaces {
+  background-color: transparent;
+  padding: 0 8px;
+}
+
+#workspaces button {
+  background-color: rgba(59, 66, 82, 0.5);
+  color: #ECEFF4;
+  border-radius: 8px;
+  padding: 0 10px;
+  margin: 3px 2px;
+  min-width: 30px;
+}
+
+#workspaces button.active {
+  background-color: rgba(136, 192, 208, 0.9);
+  color: #2E3440;
+  font-weight: bold;
+  box-shadow: 0 0 0 1px rgba(236, 239, 244, 0.15), 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+#workspaces button:hover {
+  background-color: rgba(76, 86, 106, 0.7);
+  color: #ECEFF4;
+}
+
+#window {
+  background-color: transparent;
+  color: #ECEFF4;
+  margin: 0 8px;
+  padding: 0 8px;
+}
+
+#pulseaudio,
+#network,
+#battery,
+#clock {
+  background-color: rgba(59, 66, 82, 0.5);
+  color: #ECEFF4;
+  padding: 0 8px;
+  margin: 3px 2px;
+  border-radius: 8px;
+  min-width: 80px;
+}
+
+#clock {
+  background-color: rgba(76, 86, 106, 0.38);
+}
+
+#pulseaudio {
+  min-width: 100px;
+}
+
+#battery.charging {
+  color: #A3BE8C;
+}
+
+#battery.critical {
+  color: #BF616A;
+  animation: blink 0.5s infinite;
+}
+
+@keyframes blink {
+  to { opacity: 0.3; }
+}
+
+#mode {
+  background-color: rgba(191, 97, 106, 0.85);
+  color: #ECEFF4;
+  padding: 0 8px;
+  margin: 3px 2px;
+  border-radius: 8px;
+}
+
+tooltip {
+  background-color: rgba(46, 52, 64, 0.78);
+  color: #ECEFF4;
+  border-radius: 8px;
+  border: 1px solid rgba(236, 239, 244, 0.08);
+}

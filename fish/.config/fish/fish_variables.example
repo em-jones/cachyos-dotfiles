@@ -1,0 +1,12 @@
+# This file contains fish universal variable definitions.
+# VERSION: 3.0
+# NOTE: template only — real fish_variables is gitignored because it may
+# contain secrets (SURREAL_PASS etc.). Copy this to
+# ~/.config/fish/fish_variables on a fresh machine, then set secrets via:
+#   set -Ux SURREAL_USER root
+#   set -Ux SURREAL_PASS (pass TASK_DB)
+#   set -Ux EM_TASK_SURREAL_URL wss://your-host/rpc
+SETUVAR --export fish_greeting:
+SETUVAR --export fish_key_bindings:fish_vi_key_bindings
+SETUVAR budspencer_nogreeting:\x1d
+SETUVAR budspencer_pwdstyle:short\x1elong\x1enone

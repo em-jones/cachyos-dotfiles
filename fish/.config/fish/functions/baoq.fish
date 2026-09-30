@@ -1,0 +1,1 @@
+/home/em/repos/delivery-system/ensemble/scripts/local/baoq.fish

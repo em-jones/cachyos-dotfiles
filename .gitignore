@@ -1,0 +1,15 @@
+# ---> dotfiles: machine-local secrets, caches, OS state. Never commit.
+.claude/settings.local.json
+.cc-writes/
+.agent/
+node_modules/
+__pycache__/
+*.pyc
+tmp/
+bk_level
+.DS_Store
+*~
+# password-store / gpg never live here
+*.gpg
+# fish universal vars contain secrets (SURREAL_PASS etc.) -> use fish_variables.example
+fish/.config/fish/fish_variables

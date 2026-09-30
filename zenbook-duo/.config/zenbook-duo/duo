@@ -1,0 +1,217 @@
+#!/usr/bin/env bash
+
+cd "$(dirname "$(realpath "$0")")"
+
+# 3k model
+prefered_resolution="2880x1800@120Hz"
+niri_mode="2880x1800@120" # niri mode syntax has no "Hz" suffix
+ui_scale=1.00 # 1.75
+# x offset for rotated side-by-side layout = rotated width of one panel (1800/1 = 1800)
+y_offset=1800
+backlight=card1-eDP-2-backlight
+
+# 1080p model
+#prefered_resolution="1920x1200@60.003"
+#niri_mode="1920x1200@60.003"
+#backlight=card1-eDP-2-backlight
+#ui_scale=1
+#y_offset=1200
+
+# Wacom stylus/touch identifiers (from `swaymsg -t get_inputs`), top/bottom panel
+# These are only usable under sway: niri (v26.04) has no per-device input
+# configuration and no runtime input IPC, so the set-tablet-mapping /
+# toggle-bottom-touch subcommands are sway-only.
+tablet_top="1267:17479:ELAN9008:00_04F3:4447_Stylus"
+tablet_bottom="1267:17480:ELAN9009:00_04F3:4448_Stylus"
+touch_bottom="1267:17480:ELAN9009:00_04F3:4448_Touchpad"
+
+function suenv {
+  sudo /usr/bin/env "$@"
+}
+
+# --- Compositor detection ---
+# This script is shared between the sway session (still in use) and niri, so
+# every compositor interaction is dispatched to whichever is actually running.
+
+function in-sway {
+  [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null 2>&1 && swaymsg -t get_version >/dev/null 2>&1
+}
+
+function outputs-json {
+  if in-sway; then
+    swaymsg -t get_outputs
+  else
+    niri msg --json outputs
+  fi
+}
+
+function external-display-connected {
+  [ "$(outputs-json | jq -r '[.[] | select(.name | test("^eDP-[12]$") | not)] | length')" != "0" ]
+}
+
+function active-external-displays {
+  outputs-json | jq -r '.[] | select(.name | test("^eDP-[12]$") | not) | .name'
+}
+
+# Is an output enabled? (the JSON field differs between sway and niri)
+function panel-on {
+  local name="$1"
+  if in-sway; then
+    outputs-json | jq -e --arg n "$name" '.[] | select(.name==$n) | select(.active==true)' >/dev/null 2>&1
+  else
+    outputs-json | jq -e --arg n "$name" '.[] | select(.name==$n) | select(.logical != null)' >/dev/null 2>&1
+  fi
+}
+
+# Enable/disable a panel (on|off)
+function panel-power {
+  local name="$1" state="$2"
+  if in-sway; then
+    swaymsg "output $name $state"
+  else
+    niri msg output "$name" "$state"
+  fi
+}
+
+# Configure a panel: mode, scale, transform, optional position
+function set-panel {
+  local name="$1" pos="$2" transform="$3"
+  if in-sway; then
+    swaymsg "output $name enable resolution $prefered_resolution position $pos scale $ui_scale transform $transform"
+  else
+    niri msg output "$name" on
+    niri msg output "$name" mode "$niri_mode"
+    niri msg output "$name" scale "$ui_scale"
+    niri msg output "$name" transform "$transform"
+    if [ -n "$pos" ]; then
+      niri msg output "$name" position set $pos
+    fi
+  fi
+}
+
+case "$1" in
+  watch-displays)
+    while inotifywait -e attrib /dev/bus/usb/*/ ; do
+      if ! external-display-connected; then
+        "$0" normal
+      fi
+    done
+    ;;
+  set-displays)
+    sleep 1
+    if ! external-display-connected; then
+      "$0" normal
+    fi
+    ;;
+  normal|bottom-up)
+    if lsusb|grep 0b05:1bf2 ; then
+      "$0" top
+    else
+      "$0" both
+    fi
+    ;;
+  top)
+    set-panel eDP-1 "0 0" normal
+    panel-power eDP-2 off
+    ;;
+  both)
+    set-panel eDP-1 "0 0" normal
+    set-panel eDP-2 "0 $y_offset" normal
+    ;;
+  bottom)
+    set-panel eDP-2 "0 0" normal
+    panel-power eDP-1 off
+    ;;
+  # Rotation transforms use the wl_output enum (90 = rotated 90° counter-clockwise),
+  # the same numbering sway/GNOME use. niri accepts the same values (normal, 90, 180,
+  # 270, flipped, flipped-90, flipped-180, flipped-270).
+  # Verify on hardware and swap 90/270 below if the image comes out upside-down.
+  left-up)
+    set-panel eDP-2 "0 0" 270
+    set-panel eDP-1 "$y_offset 0" 270
+    ;;
+  right-up)
+    set-panel eDP-1 "0 0" 90
+    set-panel eDP-2 "$y_offset 0" 90
+    ;;
+  status-internal)
+    if panel-on eDP-1 && panel-on eDP-2; then
+      echo both
+    elif panel-on eDP-1; then
+      echo top
+    elif panel-on eDP-2; then
+      echo bottom
+    else
+      echo none
+    fi
+    ;;
+  status)
+    (
+      active-external-displays
+    )|grep -vE "^$"|sed -z "s/\n/+/g"
+    "$0" status-internal
+    ;;
+  toggle)
+    if panel-on eDP-1 && panel-on eDP-2; then
+      "$0" top
+    else
+      "$0" both
+    fi
+    ;;
+  set-tablet-mapping)
+    # sway-only: niri can't map individual input devices (see header note).
+    if in-sway; then
+      swaymsg "input \"$tablet_top\" map_to_output eDP-1"
+      swaymsg "input \"$tablet_bottom\" map_to_output eDP-2"
+    else
+      echo "duo: set-tablet-mapping is sway-only (niri has no per-device input config)" >&2
+      exit 1
+    fi
+    ;;
+  toggle-bottom-touch)
+    # sway-only: see header note.
+    if in-sway; then
+      if panel-on eDP-2; then
+        swaymsg "input \"$touch_bottom\" events enabled"
+      else
+        swaymsg "input \"$touch_bottom\" events disabled"
+      fi
+    else
+      echo "duo: toggle-bottom-touch is sway-only (niri has no per-device input config)" >&2
+      exit 1
+    fi
+    ;;
+  bat-limit)
+    echo "${2:-80}" | suenv tee /sys/class/power_supply/BAT0/charge_control_end_threshold
+    ;;
+  sync-backlight)
+    cat "/sys/class/backlight/intel_backlight/brightness" |
+      suenv tee /sys/class/backlight/$backlight/brightness
+    ;;
+  set-kb-backlight)
+    suenv python3 bk.py "$2"
+    ;;
+  toggle-kb-backlight)
+    suenv python3 bk_toggle.py
+    ;;
+  step-kb-backlight)
+    level=$(cat tmp/bk_level 2>/dev/null || echo 0)
+    if [ "$2" = "up" ]; then
+      level=$(( level < 3 ? level + 1 : 3 ))
+    else
+      level=$(( level > 0 ? level - 1 : 0 ))
+    fi
+    suenv python3 bk.py "$level"
+    echo "$level" > tmp/bk_level
+    ;;
+  watch-backlight)
+    "$0" sync-backlight
+    while inotifywait -e modify /sys/class/backlight/intel_backlight/brightness ; do
+      "$0" sync-backlight
+    done
+    ;;
+  watch-rotation)
+    monitor-sensor --accel | stdbuf -oL grep orientation | stdbuf -oL cut -d: -f2 | stdbuf -oL sed 's/[ )]//g' | xargs -I '{}' stdbuf -oL "$0" '{}'
+    ;;
+  *) echo "Usage: duo <top|bottom|both|set-displays|toggle|status|set-tablet-mapping|toggle-bottom-touch|bat-limit|sync-backlight|set-kb-backlight|toggle-kb-backlight|step-kb-backlight|watch-backlight|watch-rotation|watch-displays>"
+esac

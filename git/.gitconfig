@@ -1,0 +1,8 @@
+[init]
+	defaultBranch = main
+[user]
+	email = you@example.com
+	name = Your Name
+	# Set your real identity after stowing:
+	#   git config --global user.name "Your Name"
+	#   git config --global user.email "you@example.com"

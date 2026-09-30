@@ -1,0 +1,291 @@
+// Niri config — Nord theme (migrated from sway/swayfx)
+// KDL format: https://kdl.dev
+// Full config reference: https://niri-wm.github.io/niri/Configuration:-Introduction
+
+// --- Nord color palette (niri has no variables; colors are inlined) ---
+// nord0  #2E3440  nord1  #3B4252  nord2  #434C5E  nord3  #4C566A
+// nord4  #D8DEE9  nord5  #E5E9F0  nord6  #ECEFF4
+// nord7  #8FBCBB  nord8  #88C0D0  nord9  #81A1C1  nord10 #5E81AC
+// nord11 #BF616A  nord12 #D08770 nord13 #EBCB8B  nord14 #A3BE8C  nord15 #B48EAD
+
+// NOTE (Zenbook Duo stylus/touch): niri (v26.04) cannot map individual
+// stylus/touch devices to outputs (per-device input config doesn't exist yet),
+// so the duo script's per-panel `map_to_output` calls don't carry over.
+// niri's default "union" mapping makes each stylus track its physical panel
+// while both screens are on and correctly positioned. See
+// ~/.config/zenbook-duo/duo for details.
+
+// Workspaces numbered 1-10, matching the old sway setup.
+// NOTE: in niri, workspace *switching* is done with these keys or Mod+Page_Up/Down.
+// Mouse wheel / touchpad scrolling between workspaces is intentionally NOT bound
+// (see the binds section below), so scrolling can never switch workspaces.
+workspace "1"
+workspace "2"
+workspace "3"
+workspace "4"
+workspace "5"
+workspace "6"
+workspace "7"
+workspace "8"
+workspace "9"
+workspace "10"
+
+input {
+    keyboard {
+        xkb {
+            layout "us"
+        }
+        repeat-delay 200
+        repeat-rate 40
+    }
+
+    touchpad {
+        click-method "clickfinger"
+    }
+
+    // NOTE: touchpad 3-finger vertical swipe switches workspaces and 4-finger
+    // swipe opens the overview. These gestures are hardcoded in niri (no config
+    // option to disable them as of v26.04).
+
+    // Disable the top-left hot corner (it opens the overview on hover).
+    // Drag-and-drop edge gestures keep their defaults.
+}
+
+gestures {
+    hot-corners {
+        off
+    }
+}
+
+// eDP-1/eDP-2 (Zenbook Duo) layout is applied at startup by
+// `duo set-displays` via spawn-at-startup below; external monitors are
+// picked up automatically.
+
+layout {
+    // Sway used inner 8 / outer 4; niri has a single gaps value.
+    gaps 8
+
+    focus-ring {
+        width 2
+        active-color "#88C0D0"   // nord8
+        inactive-color "#4C566A" // nord3
+    }
+
+    border {
+        off
+    }
+
+    // Ask GTK clients to drop client-side decorations, matching the old
+    // sway server-side border look.
+}
+
+prefer-no-csd
+
+// --- Glassmorphism (niri 26.04 blur) ---
+// Global blur quality. Defaults: passes 3, offset 3, noise 0.02, saturation 1.5.
+blur {
+    passes 3
+    offset 3.0      // increase for a creamier blur before bumping passes
+    noise 0.02      // hides color banding
+    saturation 1.4  // juicy glass; 1.0 = neutral
+}
+
+// Frosted, floating Waybar. GTK3 waybar can't request ext-background-effect,
+// so the blur + shadow + corner radius are set here on the compositor side to
+// match the floating pill geometry; translucency lives in waybar/style.css.
+layer-rule {
+    match namespace="^waybar$"
+
+    geometry-corner-radius 12
+
+    shadow {
+        on
+        softness 40
+        spread 6
+        offset x=0 y=5
+        color "#00000080"
+    }
+
+    background-effect {
+        blur true
+        noise 0.02
+        saturation 1.4
+    }
+}
+
+// Frosted terminals: ghostty is translucent and gets its blur from niri here,
+// since ghostty 1.3.x can't request ext-background-effect yet.
+window-rule {
+    match app-id="^ghostty$"
+
+    geometry-corner-radius 8
+
+    background-effect {
+        blur true
+        noise 0.02
+        saturation 1.4
+    }
+}
+
+// Frosted swaync (control center + popups). swaync is GTK4 and sets its own
+// blur shape via ext-background-effect; this rule guarantees blur and matches
+// the 8px corner radius in swaync/style.css.
+layer-rule {
+    match namespace="^swaync"
+
+    geometry-corner-radius 8
+
+    background-effect {
+        blur true
+        noise 0.02
+        saturation 1.4
+    }
+}
+
+spawn-at-startup "waybar"
+spawn-at-startup "swaync"
+// Nord wallpaper (gradient, see ~/.local/share/wallpapers/nord-glass.png)
+spawn-at-startup "swaybg" "-i" "/home/em/.local/share/wallpapers/nord-glass.png" "-m" "fill"
+
+// Idle: lock after 5 min, power off monitors after 10 min.
+spawn-sh-at-startup "swayidle -w timeout 300 'swaylock -c #2E3440' timeout 600 'niri msg action power-off-monitors' resume 'niri msg action power-on-monitors'"
+
+// Zenbook Duo helpers
+spawn-at-startup "/home/em/.config/zenbook-duo/duo" "set-displays"
+spawn-at-startup "/home/em/.config/zenbook-duo/duo" "watch-displays"
+spawn-at-startup "/home/em/.config/zenbook-duo/duo" "watch-rotation"
+
+// Flameshot overlay (XWayland) must be floating.
+window-rule {
+    match app-id=r#"^flameshot$"#
+    open-floating true
+}
+window-rule {
+    match app-id=r#"^appimagelauncher$"#
+    open-floating true
+}
+
+binds {
+    // Launchers / apps
+    Mod+Return { spawn "ghostty"; }
+    Mod+D      { spawn "wofi" "--show=drun"; }
+    Mod+N      { spawn "networkmanager_dmenu"; }
+
+    // Window management
+    Mod+Q      { close-window; }
+    Mod+Shift+E { quit; }
+    Ctrl+Alt+Delete { quit; }
+
+    // Lock screen (swaylock works via ext-session-lock)
+    Mod+Escape { spawn "swaylock" "-c" "#2E3440"; }
+
+    // Reload config (niri also auto-reloads on file changes; load-config-file
+    // is only available via IPC, hence spawn-sh)
+    Mod+R { spawn-sh "niri msg action load-config-file"; }
+
+    // Workspaces 1-10
+    Mod+1 { focus-workspace 1; }
+    Mod+2 { focus-workspace 2; }
+    Mod+3 { focus-workspace 3; }
+    Mod+4 { focus-workspace 4; }
+    Mod+5 { focus-workspace 5; }
+    Mod+6 { focus-workspace 6; }
+    Mod+7 { focus-workspace 7; }
+    Mod+8 { focus-workspace 8; }
+    Mod+9 { focus-workspace 9; }
+    Mod+0 { focus-workspace 10; }
+
+    Mod+Shift+1 { move-column-to-workspace 1; }
+    Mod+Shift+2 { move-column-to-workspace 2; }
+    Mod+Shift+3 { move-column-to-workspace 3; }
+    Mod+Shift+4 { move-column-to-workspace 4; }
+    Mod+Shift+5 { move-column-to-workspace 5; }
+    Mod+Shift+6 { move-column-to-workspace 6; }
+    Mod+Shift+7 { move-column-to-workspace 7; }
+    Mod+Shift+8 { move-column-to-workspace 8; }
+    Mod+Shift+9 { move-column-to-workspace 9; }
+    Mod+Shift+0 { move-column-to-workspace 10; }
+
+    Ctrl+Shift+Alt+1 { move-column-to-workspace 1; }
+    Ctrl+Shift+Alt+2 { move-column-to-workspace 2; }
+    Ctrl+Shift+Alt+3 { move-column-to-workspace 3; }
+    Ctrl+Shift+Alt+4 { move-column-to-workspace 4; }
+    Ctrl+Shift+Alt+5 { move-column-to-workspace 5; }
+    Ctrl+Shift+Alt+6 { move-column-to-workspace 6; }
+    Ctrl+Shift+Alt+7 { move-column-to-workspace 7; }
+    Ctrl+Shift+Alt+8 { move-column-to-workspace 8; }
+    Ctrl+Shift+Alt+9 { move-column-to-workspace 9; }
+    Ctrl+Shift+Alt+0 { move-column-to-workspace 10; }
+
+    // Focus movement (hjkl, same as sway)
+    Mod+H { focus-column-left; }
+    Mod+J { focus-window-or-monitor-down; }
+    Mod+K { focus-window-or-monitor-up; }
+    Mod+L { focus-column-right; }
+
+    // Move windows/columns (same as sway)
+    Mod+Shift+H { move-column-left; }
+    Mod+Shift+J { move-window-down; }
+    Mod+Shift+K { move-window-up; }
+    Mod+Shift+L { move-column-right; }
+
+    // Workspace navigation without scrolling
+    Mod+Page_Down { focus-workspace-down; }
+    Mod+Page_Up   { focus-workspace-up; }
+    Mod+Ctrl+Page_Down { move-column-to-workspace-down; }
+    Mod+Ctrl+Page_Up   { move-column-to-workspace-up; }
+    Mod+Tab { focus-workspace-previous; }
+
+    // Layout
+    Mod+F        { fullscreen-window; }
+    Mod+Shift+F  { toggle-window-floating; }
+    Mod+V        { toggle-window-floating; }
+    Mod+Space    { switch-focus-between-floating-and-tiling; }
+    Mod+W        { toggle-column-tabbed-display; } // tabbed, like sway's Mod+W
+    Mod+O        { toggle-overview; }
+    Mod+Shift+Slash { show-hotkey-overlay; }
+
+    // Resize: niri has no resize mode; cycle preset widths or use +/- 10% steps.
+    Mod+Shift+R   { switch-preset-column-width-back; }
+    Mod+Minus     { set-column-width "-10%"; }
+    Mod+Equal     { set-column-width "+10%"; }
+    Mod+Shift+Minus { set-window-height "-10%"; }
+    Mod+Shift+Equal { set-window-height "+10%"; }
+
+    // --- Scrolling between workspaces: intentionally NOT bound. ---
+    // niri only switches workspaces on scroll when a WheelScroll/TouchpadScroll
+    // bind matches, so by omitting them the mouse wheel and touchpad scroll
+    // exclusively scroll window content. (Exceptions that cannot be disabled:
+    // in the overview, wheel-scrolling over a workspace switches to it, and a
+    // 3-finger touchpad swipe switches workspaces — both hardcoded.)
+
+    // Move window between screens (vertical Zenbook Duo layout)
+    Mod+Shift+Ctrl+J { move-column-to-monitor-down; }
+    Mod+Shift+Ctrl+K { move-column-to-monitor-up; }
+    Mod+Shift+Ctrl+H { move-column-to-monitor-left; }
+    Mod+Shift+Ctrl+L { move-column-to-monitor-right; }
+
+    // Zenbook Duo display toggle
+    Mod+Shift+D { spawn-sh "~/.config/zenbook-duo/duo toggle"; }
+
+    // Brightness
+    XF86MonBrightnessUp   allow-when-locked=true { spawn "brightnessctl" "set" "+5%"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "brightnessctl" "set" "5%-"; }
+    XF86KbdBrightnessUp   allow-when-locked=true { spawn-sh "~/.config/zenbook-duo/duo step-kb-backlight up"; }
+    XF86KbdBrightnessDown allow-when-locked=true { spawn-sh "~/.config/zenbook-duo/duo step-kb-backlight down"; }
+
+    // Media / audio (pulseaudio, like sway)
+    XF86AudioPlay        allow-when-locked=true { spawn "playerctl" "play-pause"; }
+    XF86AudioNext        allow-when-locked=true { spawn "playerctl" "next"; }
+    XF86AudioPrev        allow-when-locked=true { spawn "playerctl" "previous"; }
+    XF86AudioMute        allow-when-locked=true { spawn "pactl" "set-sink-mute" "@DEFAULT_SINK@" "toggle"; }
+    XF86AudioRaiseVolume allow-when-locked=true { spawn "pactl" "set-sink-volume" "@DEFAULT_SINK@" "+5%"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn "pactl" "set-sink-volume" "@DEFAULT_SINK@" "-5%"; }
+
+    // Screenshots: flameshot (muscle memory) + niri's native screenshot UI
+    Ctrl+Alt+1 { spawn "flameshot" "gui"; }
+    Ctrl+Alt+grave { spawn "flameshot" "gui"; }
+    Print       { screenshot; }
+    Ctrl+Print  { screenshot-screen; }
+    Alt+Print   { screenshot-window; }
+}

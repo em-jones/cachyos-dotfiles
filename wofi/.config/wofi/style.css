@@ -1,0 +1,71 @@
+/* wofi Nord frosted theme — matches waybar/swaync glass */
+window {
+  font-family: "MesloLGM Nerd Font";
+  font-size: 12px;
+  background-color: rgba(46, 52, 64, 0.72);
+  border: 1px solid rgba(236, 239, 244, 0.1);
+  border-radius: 14px;
+  color: #ECEFF4;
+}
+
+#outer-box {
+  margin: 8px;
+  border-radius: 12px;
+  background-color: transparent;
+}
+
+#input {
+  background-color: rgba(59, 66, 82, 0.55);
+  border: 1px solid rgba(236, 239, 244, 0.1);
+  border-radius: 8px;
+  color: #ECEFF4;
+  padding: 6px 10px;
+  margin: 4px;
+}
+
+#inner-box {
+  background-color: transparent;
+  margin-top: 6px;
+  border-radius: 10px;
+}
+
+#entry {
+  background-color: transparent;
+  border-radius: 8px;
+  color: #ECEFF4;
+  padding: 6px 10px;
+  margin: 2px 0;
+}
+
+#entry:selected {
+  background-color: rgba(136, 192, 208, 0.85);
+  color: #2E3440;
+  font-weight: bold;
+  box-shadow: 0 0 0 1px rgba(236, 239, 244, 0.15);
+}
+
+#scroll {
+  background-color: transparent;
+}
+
+/* selected-entry text/icons stay dark for contrast */
+#text:selected,
+#img:selected {
+  color: #2E3440;
+}
+
+/* keep the drun sub-descriptions readable on glass */
+#entry:selected #text:selected {
+  color: #2E3440;
+}
+
+/* right-hand subscripts */
+#info {
+  color: rgba(236, 239, 244, 0.6);
+}
+
+/* error window */
+window.error {
+  color: #BF616A;
+  background-color: rgba(46, 52, 64, 0.85);
+}

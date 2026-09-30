@@ -1,0 +1,51 @@
+{
+  "$schema": "https://raw.githubusercontent.com/manaflow-ai/cmux/main/web/data/cmux.schema.json",
+  "schemaVersion": 1,
+  // Ported from ~/.config/tmux/tmux.conf.
+  // NOTE: cmux has no tmux-style global "prefix" setting. Each chord below
+  // repeats the prefix explicitly as ["ctrl+space", "<key>"].
+  // NOTE: tmux's vim-aware C-h/j/k/l (is_vim check that passes keys through
+  // when vim/nvim is focused) has no cmux equivalent — shortcuts.when only
+  // supports UI-focus predicates, not process detection. So pane-focus uses
+  // Ctrl+Alt+h/j/k/l here, leaving plain Ctrl-h/j/k/l free for vim/nvim.
+  // (See manaflow-ai/cmux#2772 for the upstream conditional-passthrough ask.)
+  "shortcuts": {
+    "bindings": {
+      // tmux: set -g prefix C-Space (+ splits bound on that prefix)
+      // tmux: bind \\ split-window -h
+      "splitRight": ["ctrl+space", "\\"],
+      // tmux: bind - split-window -v
+      "splitDown": ["ctrl+space", "-"],
+      // tmux: vim-aware, no-prefix pane navigation
+      // bind-key -n C-h/j/k/l select-pane -L/D/U/R
+      // -> Ctrl+Alt variant (plain Ctrl-h/j/k/l stays with the terminal/nvim)
+      "focusLeft": "ctrl+alt+h",
+      "focusDown": "ctrl+alt+j",
+      "focusUp": "ctrl+alt+k",
+      "focusRight": "ctrl+alt+l",
+      // tmux: bind-key -n M-1..M-6 select-window -t 0..5
+      // "alt+1" matches Alt+1..9 in cmux, so this covers 1..6 and beyond.
+      "selectSurfaceByNumber": "alt+1",
+      // --- standard tmux parity chords under the Ctrl-Space prefix ---
+      // tmux: c = new-window
+      "newSurface": ["ctrl+space", "c"],
+      // tmux: n / p = next / previous window
+      "nextSurface": ["ctrl+space", "n"],
+      "prevSurface": ["ctrl+space", "p"],
+      // tmux: 0..9 = select-window (prefix variant; Alt variant is above).
+      // Mapped to workspaces since surfaces are taken by Alt+number.
+      "selectWorkspaceByNumber": ["ctrl+space", "1"],
+      // tmux: x = kill-pane
+      "closeTab": ["ctrl+space", "x"],
+      // tmux: z = zoom pane
+      "toggleSplitZoom": ["ctrl+space", "z"],
+      // tmux: , = rename window
+      "renameTab": ["ctrl+space", ","],
+      // tmux: [ = copy mode (mode-keys vi set in tmux; cmux copy-mode
+      // key handling itself lives in Ghostty/terminal config, not here)
+      "toggleTerminalCopyMode": ["ctrl+space", "["],
+      // tmux: o = cycle pane focus
+      "focusNextPane": ["ctrl+space", "o"]
+    }
+  }
+}
