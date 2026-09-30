@@ -54,4 +54,5 @@ installs opencode npm deps, and enables user services. Idempotent — safe to re
 
 `fish_variables` (contains secrets), `node_modules/`, `__pycache__/`, `tmp/`,
 `.claude/settings.local.json`, password-store, wallpapers, and all of `~/repos`.
-Full explicit package list lives in `.init.sh` (`PACMAN_PKGS` / `AUR_PKGS`).
+Full explicit package list lives in `.init.sh`: tier 1 `PACMAN_PKGS`/`AUR_PKGS`
+always installs; tiers 2 (desktop) and 3 (dev) are commented-out opt-ins.

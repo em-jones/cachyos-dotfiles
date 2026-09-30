@@ -24,23 +24,30 @@ confirm() {
 command -v pacman >/dev/null 2>&1 || die "pacman not found — this script targets CachyOS/Arch."
 
 # ---------------------------------------------------------------- packages ---
-# Curated from `pacman -Qe` on the source machine. Only what a barebones
-# cachyos+niri setup actually needs: compositor stack, terminal, editor,
-# shell, session management, search, secrets, fonts. Everything else
-# (docker, k8s, dotnet, calibre, games…) install on demand.
+# Curated from `pacman -Qe` on the source machine. Tier 1 (PACMAN_PKGS) is
+# what a barebones cachyos+niri setup actually needs: compositor stack,
+# terminal, editor, shell, session management, secrets, fonts, laptop hw.
+# Tiers 2 (desktop) and 3 (dev) are commented out below — uncomment to opt in.
 PACMAN_PKGS=(
   # niri compositor stack
   niri waybar swaync wofi swaybg swayidle swaylock
   xdg-desktop-portal xdg-desktop-portal-wlr xwayland-satellite
+  xorg-xwayland         # XWayland apps (flameshot, etc.)
   wl-clipboard brightnessctl playerctl pavucontrol
-  networkmanager-dmenu flameshot gnome-keyring
+  networkmanager networkmanager-dmenu   # dmenu is useless without NM itself
+  flameshot gnome-keyring
+  # laptop hardware
+  bluez blueman upower power-profiles-daemon
   # shell + terminal + session management (tmux is THE session manager;
   # cmux carries the same keymap for GUI use; grapple/arrow do it in nvim)
   fish tmux ghostty stow git openssh
   # editor + tooling
-  neovim ripgrep fd fzf bat btop tree-sitter-cli
+  neovim vim ripgrep fd fzf bat btop tree-sitter-cli
+  bash-completion pacman-contrib reflector plocate
   # secrets / signing (fish config reads SURREAL_PASS via `pass`)
   pass gnupg
+  # firewall
+  ufw ufw-extras
   # fonts (ghostty/waybar/wofi all expect MesloLGM Nerd Font)
   ttf-meslo-nerd otf-atkinsonhyperlegiblemono-nerd
   noto-fonts noto-fonts-emoji
@@ -50,17 +57,48 @@ PACMAN_PKGS=(
   nodejs npm python uv
 )
 
+# Optional tier 2 — common desktop. Uncomment to install.
+# PACMAN_DESKTOP_PKGS=(
+#   firefox chromium thunar
+#   vlc transmission-gtk
+#   libreoffice-still calcurse calibre
+#   discord localsend-bin   # localsend-bin is AUR — move to AUR_PKGS if used
+# )
+
+# Optional tier 3 — dev stacks from the source machine. Uncomment to install.
+# PACMAN_DEV_PKGS=(
+#   docker docker-buildx docker-compose
+#   podman podman-compose   # fish config sets PODMAN_COMPOSE_PROVIDER=podman-compose
+#   bun asdf-vm             # (asdf-vm-git is AUR; official `asdf-vm` works too)
+#   dotnet-sdk-10.0 mono
+#   micro ranger
+#   playwright              # browser automation for tests
+#   opentofu packer         # IaC (pulumi is AUR: pulumi-git)
+#   wireguard-tools networkmanager-openvpn nordvpn-bin  # nordvpn-bin is AUR
+#   kwctl-bin tilt-bin cli-proxy-api-bin watchman-bin   # all AUR — move to AUR_PKGS
+#   visual-studio-code-bin cmux-tui                     # AUR
+# )
+
 # AUR only: not in official repos / cachyos repos.
 AUR_PKGS=(
   yay-bin          # AUR helper itself (skipped if already present)
+  hyprwhspr        # AUR-only. waybar style.css @imports it — waybar breaks without it
   cmux-gtk         # GUI session manager (tmux keymap port, see cmux/cmux.json)
-  opencode-bin     # AI agent TUI (config in opencode/)
   asdf-vm-git      # runtime versions (fish config wires shims)
+  # NOTE: opencode is intentionally NOT here — source machine runs it via
+  # `bun install -g opencode-ai` (see setup_opencode below), not opencode-bin.
 )
 
 install_pacman() {
   log "Installing official packages (pacman)…"
   sudo pacman -Syu --needed --noconfirm "${PACMAN_PKGS[@]}"
+  # Optional tiers (uncomment the arrays above to opt in).
+  for tier in PACMAN_DESKTOP_PKGS PACMAN_DEV_PKGS; do
+    if declare -p "$tier" >/dev/null 2>&1; then
+      log "Installing optional tier $tier…"
+      eval "sudo pacman -S --needed --noconfirm \"\${$tier[@]}\""
+    fi
+  done
 }
 
 ensure_yay() {
@@ -126,6 +164,11 @@ setup_nvim() {
 
 # ---------------------------------------------------------------- opencode ---
 setup_opencode() {
+  if ! command -v opencode >/dev/null 2>&1; then
+    log "Installing opencode via bun (same as source machine)…"
+    command -v bun >/dev/null 2>&1 || { curl -fsSL https://bun.sh/install | bash; export PATH="$HOME/.bun/bin:$PATH"; }
+    bun install -g opencode-ai || warn "opencode install failed — see https://opencode.ai/docs"
+  fi
   if [[ -f "$DOTFILES_DIR/opencode/.config/opencode/package.json" ]]; then
     log "Installing opencode plugins (npm)…"
     (cd "$DOTFILES_DIR/opencode/.config/opencode" && npm install --no-audit --no-fund || warn "npm install failed")
